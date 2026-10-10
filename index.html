@@ -3,8 +3,21 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="description" content="A tiny room full of things that remind you of someone. Make one and send it as a link.">
+<meta name="description" content="Someone made you a tiny room full of notes. Tap to open it.">
 <meta name="theme-color" content="#9ccdbb">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="care package">
+<meta property="og:title" content="a care package came for you">
+<meta property="og:description" content="Someone made you a tiny room full of notes. Tap to open it.">
+<meta property="og:url" content="https://namoos99.github.io/care-package/">
+<meta property="og:image" content="https://namoos99.github.io/care-package/docs/preview.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="An illustrated cozy room with a little avatar and a card that says a care package came for you">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://namoos99.github.io/care-package/docs/preview.jpg">
+<link rel="apple-touch-icon" href="docs/icon.png">
+<link rel="icon" type="image/png" href="docs/icon.png">
 <title>Care Package Room</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -35,6 +48,21 @@ body.viewing .top{justify-content:center}
 /* scene */
 .frame{position:relative;border:3px solid var(--ink);border-radius:20px;overflow:hidden;box-shadow:7px 7px 0 var(--ink);background:var(--olive);max-width:100%}
 #scene{display:block;width:100%;height:auto;aspect-ratio:4/3;touch-action:manipulation;transition:filter .9s ease}
+.edge{position:absolute;top:50%;transform:translateY(-50%);z-index:4;width:40px;height:40px;border-radius:50%;border:2.5px solid var(--ink);background:var(--cream);color:var(--ink);box-shadow:2px 2px 0 var(--ink);font:700 24px/1 var(--f-body);display:grid;place-items:center;padding:0 0 3px;cursor:pointer;animation:nudge 1.6s ease-in-out infinite}
+#edgeL{left:8px}#edgeR{right:8px}
+.edge span{position:absolute;top:-8px;right:-8px;min-width:20px;height:20px;border-radius:999px;background:var(--pink);color:#fff;border:2px solid var(--ink);font:700 11px/16px var(--f-body);padding:0 4px;box-sizing:border-box}
+.edge span:empty{display:none}
+@keyframes nudge{0%,100%{margin-left:0}50%{margin-left:3px}}
+#edgeL{animation-direction:reverse}
+.sealed .ctrls,.sealed .edge{display:none!important}
+.bar{width:min(220px,46vw);height:14px;border:2.5px solid var(--ink);border-radius:999px;background:var(--cream);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--pink);transition:width .4s ease}
+@media (max-width:600px){
+ #scene{aspect-ratio:1/1}
+ .cbtn{padding:8px}.cbtn .lt{display:none}.cbtn svg{width:17px;height:17px}
+ .greet{font-size:clamp(38px,12vw,60px)}
+ .found{margin-top:16px}
+}
 #scene:focus{outline:none}
 #scene:focus-visible{outline:4px solid var(--sun);outline-offset:-4px}
 .sealed #scene{filter:blur(14px) saturate(1.15) brightness(.82)}
@@ -170,9 +198,11 @@ textarea{font-family:var(--f-hand);font-size:21px;line-height:1.3;min-height:116
       <div class="frame" id="frame">
         <svg id="scene" viewBox="0 0 1280 960" tabindex="0" role="application" aria-label="Your room. Tap the floor to walk, tap things to open them. Arrow keys walk, space opens what's nearby."></svg>
         <div class="ctrls" id="ctrls">
-          <button class="cbtn" id="musicBtn" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 12.5V3.2l8-1.7v9" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="4.2" cy="12.6" r="2.2" fill="currentColor"/><circle cx="12.2" cy="10.6" r="2.2" fill="currentColor"/></svg>music</button>
-          <button class="cbtn" id="lightBtn" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M11.5 10.6A5.6 5.6 0 0 1 5.4 2.2a5.6 5.6 0 1 0 6.1 8.4Z" fill="currentColor"/></svg>night</button>
+          <button class="cbtn" id="musicBtn" aria-pressed="false" aria-label="music"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 12.5V3.2l8-1.7v9" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="4.2" cy="12.6" r="2.2" fill="currentColor"/><circle cx="12.2" cy="10.6" r="2.2" fill="currentColor"/></svg><span class="lt">music</span></button>
+          <button class="cbtn" id="lightBtn" aria-pressed="false" aria-label="night mode"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M11.5 10.6A5.6 5.6 0 0 1 5.4 2.2a5.6 5.6 0 1 0 6.1 8.4Z" fill="currentColor"/></svg><span class="lt">night</span></button>
+          
         </div>
+        <button class="edge" id="edgeL" hidden aria-label="Walk left">‹<span></span></button><button class="edge" id="edgeR" hidden aria-label="Walk right">›<span></span></button>
         <div class="songcard" id="songcard" hidden></div>
         <div class="envelope" id="env" hidden></div>
       </div>
@@ -383,6 +413,17 @@ function faceFor(id){const s=STAND[id];if(s)return s[2];const[x1,,x2]=ITEMS[id].
 const lab=id=>id==='cat'?((cur()&&cur().k)||'the cat'):ITEMS[id].label;
 function walkTo(x,y,cb){[x,y]=clampFloor(x,y);if(reduce()){P.x=x;P.y=y;P.tx=null;cb&&cb();return}P.tx=x;P.ty=y;P.arrive=cb||null}
 const scaleAt=y=>1.5+(y-700)/245*.36;
+const PHONE=window.matchMedia?matchMedia('(max-width:600px)'):{matches:false};
+let camX=null,lastCam=-1,lastVW=0,edgeKey='';
+const viewW=()=>PHONE.matches?960:1280;
+function updateEdges(){
+ const L=$('#edgeL'),R=$('#edgeR');
+ if(!PHONE.matches||!sceneVisible()||camX===null){L.hidden=R.hidden=true;edgeKey='';return}
+ let nl=0,nr=0,left=camX>6,right=camX<314;
+ if(mode==='view'){left=right=false;for(const id in vst.n){if(seen.has(id))continue;const[x1,,x2]=ITEMS[id].b,cx=(x1+x2)/2;if(cx<camX+40){nl++;left=true}else if(cx>camX+920){nr++;right=true}}}
+ const key=[left,right,nl,nr].join();if(key===edgeKey)return;edgeKey=key;
+ L.hidden=!left;R.hidden=!right;L.querySelector('span').textContent=nl||'';R.querySelector('span').textContent=nr||'';
+}
 function frame(ts){
  const t=ts/1000,dt=Math.min(.05,(ts-(P.last||ts))/1000);P.last=ts;
  const kx=(P.keys.r?1:0)-(P.keys.l?1:0),ky=(P.keys.d?1:0)-(P.keys.u?1:0);let moving=false;
@@ -408,6 +449,9 @@ function frame(ts){
   if(P.wave>0){P.wave-=dt;parts.armR.setAttribute('transform',`rotate(${((holding?-70:-135)+Math.sin(t*14)*14).toFixed(1)} ${bx} ${by})`)}
   else parts.armR.setAttribute('transform',`rotate(${(holding?sw*5:sw*26).toFixed(2)} ${bx} ${by})`);
  }
+ const vw=viewW();
+ if(vw<1280){const tgt=Math.max(0,Math.min(1280-vw,P.x-vw/2));camX=camX===null?tgt:camX+(tgt-camX)*Math.min(1,dt*3.5)}else camX=0;
+ if(Math.abs(camX-lastCam)>.3||vw!==lastVW){$('#scene').setAttribute('viewBox',`${camX.toFixed(1)} 0 ${vw} 960`);lastCam=camX;lastVW=vw;updateEdges()}
  placeBubble(t,s);nearCheck();
  requestAnimationFrame(frame);
 }
@@ -416,10 +460,10 @@ function sceneVisible(){return !$('#env')||$('#env').hidden}
 /* ---------- speech bubble + hearts ---------- */
 let bubbleW=0;
 let bubbleH=56;
-function say(text,ms=3400){const tx=$('#bText');const vw=$('#scene').getBoundingClientRect().width||1280;const fs=Math.round(30*Math.max(1,Math.min(1.9,640/vw)));tx.style.fontSize=fs+'px';bubbleH=Math.round(fs*1.85);tx.textContent=text;let w=text.length*14;try{w=tx.getComputedTextLength()}catch(e){}bubbleW=Math.max(90,w+44);P.bubbleUntil=performance.now()/1000+ms/1000;$('#bubble').setAttribute('opacity','1')}
+function say(text,ms=3400){const tx=$('#bText');const vw=$('#scene').getBoundingClientRect().width||1280;const fs=Math.round(30*Math.max(1,Math.min(1.5,640/vw*viewW()/1280)));tx.style.fontSize=fs+'px';bubbleH=Math.round(fs*1.85);tx.textContent=text;let w=text.length*14;try{w=tx.getComputedTextLength()}catch(e){}bubbleW=Math.max(90,w+44);P.bubbleUntil=performance.now()/1000+ms/1000;$('#bubble').setAttribute('opacity','1')}
 function placeBubble(t,s){
  const b=$('#bubble');if(t>P.bubbleUntil){b.setAttribute('opacity','0');return}
- const headTop=P.y-208*s, bw=Math.min(1260,bubbleW),bh=bubbleH;let cx=Math.max(bw/2+8,Math.min(1272-bw/2,P.x+(P.x<640?95:-95)));const by=Math.max(6,headTop-24-bh);
+ const headTop=P.y-208*s, VL=(camX||0)+(PHONE.matches?58:8),VR=(camX||0)+viewW()-(PHONE.matches?58:8),bw=Math.min(VR-VL,bubbleW),bh=bubbleH;let cx=Math.max(VL+bw/2,Math.min(VR-bw/2,P.x+(P.x<(VL+VR)/2?95:-95)));const by=Math.max(6,headTop-24-bh);
  const r=$('#bRect');r.setAttribute('x',(cx-bw/2).toFixed(1));r.setAttribute('y',by.toFixed(1));r.setAttribute('width',bw.toFixed(1));r.setAttribute('height',bh);
  $('#bText').setAttribute('x',cx.toFixed(1));$('#bText').setAttribute('y',(by+bh*.66).toFixed(1));
  const tx=Math.max(cx-bw/2+20,Math.min(cx+bw/2-20,P.x));$('#bTail').setAttribute('d',`M${tx-12} ${by+bh-2}L${P.x} ${headTop-6}L${tx+12} ${by+bh-2}Z`);
@@ -509,6 +553,9 @@ $('#scene').addEventListener('keydown',e=>{
 $('#scene').addEventListener('keyup',e=>{if(KEYMAP[e.key])P.keys[KEYMAP[e.key]]=false});
 $('#scene').addEventListener('blur',()=>{P.keys={}});
 $('#musicBtn').addEventListener('click',()=>setMusic(!musicOn));
+$('#edgeL').addEventListener('click',()=>walkTo(255,P.y));
+$('#edgeR').addEventListener('click',()=>walkTo(858,P.y));
+try{PHONE.addEventListener('change',()=>{camX=null;edgeKey=''})}catch(e){}
 $('#frame').addEventListener('click',e=>{if(e.target.closest('#songx'))setMusic(false)});
 $('#lightBtn').addEventListener('click',()=>setNight(!isNight));
 
@@ -582,21 +629,23 @@ function startCreate(){
  mode='create';previewing=false;document.body.classList.remove('viewing');
  $('#panel').hidden=false;$('#vgreet').hidden=true;$('#vsub').hidden=true;$('#found').hidden=true;$('#vfoot').hidden=true;$('#env').hidden=true;$('#frame').classList.remove('sealed');
  $('#hint').hidden=false;$('#tagline').hidden=false;
- drawAvatar();renderPanel();renderSpots();P.x=405;P.y=885;P.tx=null;
+ drawAvatar();renderPanel();renderSpots();P.x=405;P.y=885;P.tx=null;camX=null;edgeKey='';
  setTimeout(()=>{P.wave=1.2;say('hi! tap the floor and I’ll walk there')},500);
 }
 function startView(pkg,isPreview){
  setMusic(false);
  mode='view';previewing=isPreview;vst=pkg;seen=new Set();nearId=null;document.body.classList.add('viewing');
  $('#panel').hidden=true;$('#hint').hidden=true;$('#tagline').hidden=true;
- drawAvatar();renderSpots();P.x=405;P.y=885;P.tx=null;P.face=1;
+ drawAvatar();renderSpots();P.x=405;P.y=885;P.tx=null;P.face=1;camX=null;edgeKey='';
  $('#frame').classList.add('sealed');const env=$('#env');env.hidden=false;env.classList.remove('opening');
  env.innerHTML=`<div class="env-card">${STAMP}<h1>${esc(vst.to||'Hey you')}, a care package came for you</h1><p>from ${esc(vst.from||'someone who misses you')}</p><button class="btn pink" id="openBtn">Open it</button></div>`;
  $('#vgreet').textContent=vst.g||'i miss you';$('#vsub').innerHTML=`${esc(vst.from||'Someone')} hid little notes around this room for ${esc(vst.to||'you')}. Tap a sparkle and they’ll walk you to it, or tap the floor to wander.<span class="kbd"> Arrow keys work too.</span>`;
  $('#vfoot').innerHTML=isPreview?'<button class="btn alt" id="backEdit">Back to editing</button>':'<a class="btn alt" href="#" id="makeOwn">Make one for someone</a>';
  $('#vfoot').hidden=false;window.scrollTo(0,0);
 }
-function updateFound(){const ids=ITEM_ORDER.filter(id=>id in vst.n);$('#found').innerHTML=`<b>${seen.size} of ${ids.length} found</b>${ids.map(id=>`<span class="pip ${seen.has(id)?'on':''}" title="${esc(lab(id))}"></span>`).join('')}`}
+function updateFound(){const ids=ITEM_ORDER.filter(id=>id in vst.n),n=ids.length;
+ $('#found').innerHTML=`<b>${seen.size} of ${n} found</b>`+(n>10?`<span class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="${n}" aria-valuenow="${seen.size}"><i style="width:${n?seen.size/n*100:0}%"></i></span>`:ids.map(id=>`<span class="pip ${seen.has(id)?'on':''}" title="${esc(lab(id))}"></span>`).join(''));
+ edgeKey='';updateEdges()}
 document.addEventListener('click',e=>{
  const b=e.target.closest('#openBtn,#backEdit,#makeOwn');if(!b)return;
  if(b.id==='openBtn'){b.disabled=true;const env=$('#env');env.classList.add('opening');
@@ -606,7 +655,7 @@ document.addEventListener('click',e=>{
  if(b.id==='makeOwn'){e.preventDefault();try{history.replaceState(null,'',location.pathname)}catch(_){}st=loadDraft()||clone(DEFAULT);closeNote();startCreate()}
 });
 function openNote(id){
- const first=!seen.has(id);seen.add(id);renderSpots();updateFound();
+ const first=!seen.has(id);seen.add(id);renderSpots();updateFound();edgeKey='';updateEdges();
  $('#ntag').textContent=lab(id);
  $('#ntext').textContent=vst.n[id]||'(no words on this one. it just felt like it belonged here.)';
  $('#nfrom').textContent='— '+(vst.from||'me');$('#scrim').hidden=false;$('#nclose').focus();
